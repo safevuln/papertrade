@@ -1,0 +1,82 @@
+<!doctype html>
+<html>
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>PaperTrade VN Dashboard</title>
+  <style>
+    body{font-family:system-ui,Segoe UI,Arial;margin:16px}
+    .grid{display:grid;gap:12px;grid-template-columns:repeat(auto-fit,minmax(240px,1fr))}
+    .card{border:1px solid #ddd;border-radius:14px;padding:12px}
+    h1{margin:0 0 8px 0;font-size:22px}
+    h2{margin:0 0 8px 0;font-size:16px}
+    .muted{color:#666;font-size:12px}
+    table{width:100%;border-collapse:collapse}
+    td,th{padding:6px;border-bottom:1px solid #eee;text-align:left;font-size:13px}
+    .topbar{display:flex;gap:10px;align-items:baseline;flex-wrap:wrap;margin-bottom:12px}
+    .pill{border:1px solid #eee;border-radius:999px;padding:4px 10px;font-size:12px}
+  </style>
+</head>
+<body>
+  <div class="topbar">
+    <h1>PaperTrade VN (Demo)</h1>
+    <span class="pill">Market hours: Mon–Fri 09:00–11:30, 13:00–15:00 (GMT+7)</span>
+    <span class="pill">Weekly reset: Sun 23:59</span>
+  </div>
+  <p class="muted">Đặt lệnh qua Telegram bot. Dashboard chỉ hiển thị giá & leaderboard.</p>
+
+  <div class="grid">
+    <div class="card">
+      <h2>Prices</h2>
+      <div id="prices" class="muted">Loading...</div>
+    </div>
+    <div class="card">
+      <h2>Leaderboard</h2>
+      <div id="lb" class="muted">Loading...</div>
+    </div>
+  </div>
+
+  <script>
+    const API_BASE = "https://papertrade.starlinksatellitewifi.workers.dev";
+
+    function vnd(n){ return (Number(n)||0).toLocaleString("vi-VN") + " VND"; }
+    function fmtTime(ms){
+      const d = new Date(Number(ms)||0);
+      return isNaN(d.getTime()) ? "" : d.toLocaleString("vi-VN");
+    }
+
+    async function load() {
+      const [p, l] = await Promise.all([
+        fetch(API_BASE + "/api/public/prices").then(r=>r.json()),
+        fetch(API_BASE + "/api/public/leaderboard").then(r=>r.json()),
+      ]);
+
+      const pdata = p.data || [];
+      document.getElementById("prices").innerHTML = `
+        <table>
+          <thead><tr><th>Mã</th><th>Giá</th><th class="muted">Updated</th></tr></thead>
+          <tbody>
+            ${pdata.map(x=>`<tr><td><b>${x.symbol}</b></td><td>${vnd(x.last_price)}</td><td class="muted">${fmtTime(x.updated_at)}</td></tr>`).join("")}
+          </tbody>
+        </table>
+      `;
+
+      const ldata = l.data || [];
+      document.getElementById("lb").innerHTML = `
+        <table>
+          <thead><tr><th>#</th><th>User</th><th>NAV</th></tr></thead>
+          <tbody>
+            ${ldata.slice(0,10).map((x,i)=>{
+              const name = x.username ? "@"+x.username : (x.display_name || "anonymous");
+              return `<tr><td>${i+1}</td><td>${name}</td><td>${vnd(x.nav)}</td></tr>`;
+            }).join("")}
+          </tbody>
+        </table>
+      `;
+    }
+
+    load();
+    setInterval(load, 15000);
+  </script>
+</body>
+</html>
